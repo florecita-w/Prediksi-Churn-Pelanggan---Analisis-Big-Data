@@ -1,0 +1,60 @@
+# ============================================================
+# .gitignore - Prediksi Churn Pelanggan Layanan Berlangganan
+# Prinsip: yang di-commit hanya kode, dokumentasi, dan konfigurasi.
+# Apa pun yang bisa dibuat ulang / di-install di tiap perangkat diabaikan.
+# ============================================================
+ 
+# ---------- Virtual environment & paket (di-install per perangkat) ----------
+.venv/
+venv/
+env/
+ENV/
+ 
+# ---------- Cache & artefak Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+ 
+# ---------- Jupyter ----------
+.ipynb_checkpoints/
+ 
+# ---------- Data (diunduh ulang per perangkat, lihat README) ----------
+# Isi folder data diabaikan, tapi file .gitkeep tetap dilacak
+# supaya struktur folder ikut ter-clone.
+data/raw/*
+data/curated/*
+data/model_ready/*
+data/scored/*
+!data/**/.gitkeep
+ 
+# ---------- Artefak Spark (dibuat otomatis saat menjalankan PySpark) ----------
+spark-warehouse/
+metastore_db/
+derby.log
+*.crc
+ 
+# ---------- Model terlatih (bisa dilatih ulang) ----------
+models/
+*.pkl
+*.joblib
+ 
+# ---------- Rahasia & kredensial (JANGAN pernah di-commit) ----------
+kaggle.json
+.env
+.env.*
+.streamlit/secrets.toml
+ 
+# ---------- Pengaturan editor & sistem operasi ----------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+ 
+Claude finished the response
