@@ -1,0 +1,9 @@
+fitur,nilai,n,churn_rate
+gender,Female,190580,0.6666911533214398
+gender,Male,250252,0.4912688010485431
+subscription_type,Basic,143026,0.5817823332820606
+subscription_type,Premium,148678,0.5594169951169642
+subscription_type,Standard,149128,0.5606995332868409
+contract_length,Annual,177198,0.4607614081423041
+contract_length,Monthly,87104,1.0
+contract_length,Quarterly,176530,0.4602560471307993

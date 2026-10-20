@@ -1,0 +1,66 @@
+Baris curated: 440,833 | setelah buang baris kosong: 440,832
+Churn rate keseluruhan: 56.71% (kelas mayoritas, bukan imbalanced)
+
+== Rata-rata/median fitur numerik per kelas churn ==
+churn                         0       1
+age              mean     36.26   41.75
+                 median   37.00   42.00
+tenure           mean     32.28   30.47
+                 median   33.00   30.00
+usage_frequency  mean     16.26   15.46
+                 median   17.00   15.00
+support_calls    mean      1.59    5.14
+                 median    1.00    5.00
+payment_delay    mean     10.02   15.22
+                 median   10.00   15.00
+total_spend      mean    749.95  541.29
+                 median  749.98  534.00
+last_interaction mean     13.01   15.60
+                 median   12.00   16.00
+
+== Churn rate per kategori (garis dasar 56.7%) ==
+            fitur     nilai      n  churn_rate
+           gender    Female 190580        66.7
+           gender      Male 250252        49.1
+subscription_type     Basic 143026        58.2
+subscription_type   Premium 148678        55.9
+subscription_type  Standard 149128        56.1
+  contract_length    Annual 177198        46.1
+  contract_length   Monthly  87104       100.0
+  contract_length Quarterly 176530        46.0
+
+== Korelasi fitur numerik dengan churn (urut |r|) ==
+support_calls       0.574
+total_spend        -0.429
+payment_delay       0.312
+age                 0.218
+last_interaction    0.150
+tenure             -0.052
+usage_frequency    -0.046
+Pasangan fitur berkorelasi kuat (|r|>=0.5): tidak ada
+
+== Outlier (aturan 1.5xIQR) ==
+           fitur   min    max  n_outlier  persen
+             age  18.0   65.0          0     0.0
+          tenure   1.0   60.0          0     0.0
+ usage_frequency   1.0   30.0          0     0.0
+   support_calls   0.0   10.0          0     0.0
+   payment_delay   0.0   30.0          0     0.0
+     total_spend 100.0 1000.0          0     0.0
+last_interaction   1.0   30.0          0     0.0
+
+== Pola tidak wajar: segmen dengan churn rate ekstrem ==
+support_calls: churn rate berkisar 30.3% - 100.0% antar nilai
+payment_delay: churn rate berkisar 45.8% - 100.0% antar nilai
+Bin hampir 'murni' satu kelas (indikasi data sintetis/aturan deterministik): age: bin dengan churn 38.7%-100.0%; support_calls: bin dengan churn 30.3%-100.0%; payment_delay: bin dengan churn 46.3%-100.0%; total_spend: bin dengan churn 41.1%-100.0%
+
+== Draf hipotesis (verifikasi di model & uji statistik) ==
+H: peluang churn naik saat support_calls meningkat (r=0.57).
+H: peluang churn turun saat total_spend meningkat (r=-0.43).
+H: peluang churn naik saat payment_delay meningkat (r=0.31).
+H: peluang churn naik saat age meningkat (r=0.22).
+H: peluang churn naik saat last_interaction meningkat (r=0.15).
+H: contract_length=Monthly berbeda dari rata-rata (churn 100.0% vs 56.7%).
+H: contract_length=Quarterly berbeda dari rata-rata (churn 46.0% vs 56.7%).
+H: contract_length=Annual berbeda dari rata-rata (churn 46.1% vs 56.7%).
+H0 per fitur: tidak ada perbedaan churn antar kelompok; uji dengan chi-kuadrat (kategorikal) / t-test (numerik).

@@ -1,0 +1,5 @@
+,age,age,tenure,tenure,usage_frequency,usage_frequency,support_calls,support_calls,payment_delay,payment_delay,total_spend,total_spend,last_interaction,last_interaction
+,mean,median,mean,median,mean,median,mean,median,mean,median,mean,median,mean,median
+churn,,,,,,,,,,,,,,
+0,36.26,37.0,32.28,33.0,16.26,17.0,1.59,1.0,10.02,10.0,749.95,749.98,13.01,12.0
+1,41.75,42.0,30.47,30.0,15.46,15.0,5.14,5.0,15.22,15.0,541.29,534.0,15.6,16.0
