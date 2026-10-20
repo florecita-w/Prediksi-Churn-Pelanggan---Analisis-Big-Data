@@ -1,4 +1,4 @@
-"""Tahap 2 (PySpark): validasi data, buang baris kosong, split train/valid/test, simpan.
+"""Tahap 3 (PySpark): validasi data, buang baris kosong, split train/valid/test, simpan.
 
 Jalankan dari root proyek (venv aktif), SETELAH 01_ingest_profile.py berhasil:
     python src/02_spark_pipeline.py

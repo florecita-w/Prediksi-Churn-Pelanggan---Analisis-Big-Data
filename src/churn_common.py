@@ -1,7 +1,7 @@
 """Konfigurasi dan fungsi bersama untuk skrip 02-04 (Customer Churn Dataset).
 
 File ini tidak dijalankan langsung. Skrip 02, 03, dan 04 mengimpornya.
-Letakkan di folder src/ bersama skrip lainnya.
+
 """
 import os
 
@@ -37,6 +37,17 @@ NUM = [
 CAT = ["gender", "subscription_type", "contract_length"]
 MODEL_NAMES = ("Logistic Regression", "Random Forest")
 
+# --- Rekayasa fitur (skrip 04_feature_engineering.py) ---
+FEATURES_PATH = "data/model_ready/churn_features.parquet"
+FLAG_BASES = ["age", "support_calls", "payment_delay", "total_spend"]
+FE_NUM = (
+    ["is_monthly", "rule_any", "spend_per_tenure"]
+    + [f"{c}_{side}_pure" for c in FLAG_BASES for side in ("lo", "hi")]
+)
+# USE_GENDER=0 untuk melatih tanpa gender (keputusan etika, lihat P15). Kolom gender tetap
+# ada di data supaya pemeriksaan bias per gender di skrip 04 tetap jalan.
+CAT_MODEL = CAT if os.environ.get("USE_GENDER", "1") == "1" else [c for c in CAT if c != "gender"]
+
 
 def get_spark(app_name: str) -> SparkSession:
     """Spark lokal. Memori driver dapat diubah: set SPARK_DRIVER_MEMORY=2g (default 4g)."""
@@ -52,23 +63,34 @@ def get_spark(app_name: str) -> SparkSession:
     return spark
 
 
+def use_features() -> bool:
+    """True bila fitur turunan tersedia. USE_FE=0 memaksa memakai fitur asli saja."""
+    return os.environ.get("USE_FE", "1") == "1" and os.path.exists(FEATURES_PATH)
+
+
+def model_num() -> list:
+    return NUM + FE_NUM if use_features() else NUM
+
+
 def load_split(spark):
-    return spark.read.parquet(MODEL_READY).withColumn("label", F.col(LABEL).cast("double"))
+    path = FEATURES_PATH if use_features() else MODEL_READY
+    return spark.read.parquet(path).withColumn("label", F.col(LABEL).cast("double"))
 
 
 def build_pipeline(name: str) -> Pipeline:
     """Imputasi tidak diperlukan (data lengkap setelah baris kosong dibuang).
     Encoding dan standardisasi ada di dalam Pipeline, jadi hanya belajar dari data train."""
+    cats = CAT_MODEL
     indexer = StringIndexer(
-        inputCols=CAT, outputCols=[f"{c}_idx" for c in CAT], handleInvalid="keep"
+        inputCols=cats, outputCols=[f"{c}_idx" for c in cats], handleInvalid="keep"
     )
     encoder = OneHotEncoder(
-        inputCols=[f"{c}_idx" for c in CAT],
-        outputCols=[f"{c}_oh" for c in CAT],
+        inputCols=[f"{c}_idx" for c in cats],
+        outputCols=[f"{c}_oh" for c in cats],
         handleInvalid="keep",
     )
     assembler = VectorAssembler(
-        inputCols=NUM + [f"{c}_oh" for c in CAT], outputCol="features_raw"
+        inputCols=model_num() + [f"{c}_oh" for c in cats], outputCol="features_raw"
     )
     pre = [indexer, encoder, assembler]
     if name == "Logistic Regression":

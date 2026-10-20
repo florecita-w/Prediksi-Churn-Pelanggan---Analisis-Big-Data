@@ -1,27 +1,28 @@
-"""Tahap 4 (PySpark): tentukan tiga kelas risiko churn dan simpan skor untuk dashboard.
+"""Tahap 7-8 (PySpark): tiga kelas risiko churn BERBASIS ATURAN + model, simpan skor untuk dashboard.
 
 Kelas: "Pasti churn", "Akan churn", "Pasti tidak churn".
 
-Jalankan dari root proyek (venv aktif), setelah 02_spark_pipeline.py berhasil:
+Jalankan dari root proyek (venv aktif), setelah 04_feature_engineering.py berhasil:
     python src/04_risk_tiers.py
 
-Masukan : data/model_ready/churn_split.parquet
+Masukan : data/model_ready/churn_features.parquet (kolom rule_any dari rekayasa fitur)
 Keluaran: docs/tier_results.txt, data/scored/scored_customers.parquet,
           data/scored/tier_summary.csv
 
 Cara kerja:
-1. Latih Logistic Regression dan Random Forest di data train, pilih yang PR-AUC-nya
-   tertinggi di data validasi.
-2. Ambang tiga kelas dipilih dari skor di data validasi:
-   - "Pasti churn"       : skor >= ambang atas, dengan precision >= PRECISION_TARGET
-   - "Pasti tidak churn" : skor <= ambang bawah, dengan NPV >= NPV_TARGET
-   - "Akan churn"        : sisanya (zona tidak pasti)
-3. Data test dipakai SEKALI untuk menilai hasil akhir (dengan selang kepercayaan 95%).
-4. Uji bias per gender dan kelompok usia dicetak untuk lembar kepatuhan dan etika.
+1. "Pasti churn"  : rule_any = 1 (kontrak Monthly atau salah satu ambang ekor murni dari
+                    data train). Aturannya transparan dan diverifikasi di valid dan test.
+2. Pelanggan di luar aturan (rule_any = 0) dinilai model. Model dilatih HANYA pada baris
+   train yang rule_any = 0, karena di situlah ketidakpastian yang sebenarnya.
+3. Di kelompok itu: skor <= ambang bawah -> "Pasti tidak churn" (NPV >= NPV_TARGET di
+   validasi); selebihnya -> "Akan churn" (zona risiko yang perlu dipantau).
+4. Data test dipakai SEKALI untuk menilai hasil akhir (dengan selang kepercayaan 95%).
+5. Uji bias per gender dan kelompok usia dicetak untuk lembar kepatuhan dan etika.
 
-Catatan: "pasti" di sini berarti keyakinan tinggi yang terukur, bukan jaminan. Setiap kelas
-dilaporkan dengan precision/NPV dan selang kepercayaannya.
+Catatan: "pasti" berarti keyakinan tinggi yang terukur, bukan jaminan. Setiap kelas
+dilaporkan dengan presisi/NPV dan selang kepercayaannya.
 """
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -40,6 +41,7 @@ from churn_common import (
     build_pipeline,
     get_spark,
     load_split,
+    use_features,
 )
 from tier_utils import (
     TIER_ORDER,
@@ -52,9 +54,9 @@ from tier_utils import (
     tier_rows,
 )
 
-PRECISION_TARGET = 0.90   # kelas "Pasti churn"
-NPV_TARGET = 0.90         # kelas "Pasti tidak churn"
+NPV_TARGET = float(os.environ.get("NPV_TARGET", "0.97"))  # kelas "Pasti tidak churn"
 MIN_TIER = 500            # minimal pelanggan di kelas "pasti" agar ambang stabil
+RULE_SCORE = 2.0          # skor buatan di atas semua skor model: penanda baris berstatus aturan
 
 lines = []
 
@@ -65,13 +67,18 @@ def out(text: str = "") -> None:
 
 
 spark = get_spark("churn-risk-tiers")
+if not use_features():
+    raise SystemExit("data/model_ready/churn_features.parquet belum ada. "
+                     "Jalankan python src/04_feature_engineering.py dulu.")
 df = load_split(spark)
-train = df.filter(F.col("split") == "train").cache()
+train_all = df.filter(F.col("split") == "train")
+train = train_all.filter(F.col("rule_any") == 0).cache()      # model belajar di luar aturan
 valid = df.filter(F.col("split") == "valid").cache()
 test = df.filter(F.col("split") == "test").cache()
+valid_nr = valid.filter(F.col("rule_any") == 0)               # untuk pilih model & ambang
 
 n_train, n_valid, n_test = train.count(), valid.count(), test.count()
-out(f"Train {n_train} | Valid {n_valid} | Test {n_test} [test dikunci sampai evaluasi akhir]")
+out(f"Train (di luar aturan) {n_train} | Valid {n_valid} | Test {n_test} [test dikunci sampai evaluasi akhir]")
 out()
 
 ev_pr = BinaryClassificationEvaluator(
@@ -82,11 +89,11 @@ ev_roc = BinaryClassificationEvaluator(
 )
 
 # ---------- 1. Pilih model ----------
-out("== Pemilihan model (data validasi) ==")
+out("== Pemilihan model (validasi, hanya pelanggan di luar aturan) ==")
 fitted, scores = {}, {}
 for name in MODEL_NAMES:
     model = build_pipeline(name).fit(train)
-    pv = model.transform(valid)
+    pv = model.transform(valid_nr)
     fitted[name] = model
     scores[name] = (ev_pr.evaluate(pv), ev_roc.evaluate(pv))
     out(f"{name:20s} PR-AUC {scores[name][0]:.4f} | ROC-AUC {scores[name][1]:.4f}")
@@ -95,45 +102,34 @@ model = fitted[best]
 out(f"Model terpilih: {best}")
 out()
 
-# ---------- 2. Ambang dari data validasi ----------
-valid_scored = add_score(model.transform(valid)).select("p", "label")
-vdata = [(r["p"], r["label"]) for r in valid_scored.collect()]
-prev = sum(y for _, y in vdata) / len(vdata)
-out(f"Prevalensi churn di validasi: {prev:.3f}")
+# ---------- 2. Ambang dari data validasi (hanya di luar aturan) ----------
+valid_scored = add_score(model.transform(valid)).select("p", "label", "rule_any")
+vrows = valid_scored.collect()
+vdata_nr = [(r["p"], r["label"]) for r in vrows if r["rule_any"] == 0]
+vdata = [(RULE_SCORE if r["rule_any"] == 1 else r["p"], r["label"]) for r in vrows]
+prev_nr = sum(y for _, y in vdata_nr) / len(vdata_nr)
+out(f"Validasi: {len(vdata)} pelanggan, {len(vdata) - len(vdata_nr)} terkena aturan, "
+    f"{len(vdata_nr)} di luar aturan")
+out(f"Churn di luar aturan: {prev_nr:.3f} (NPV tanpa model = {1 - prev_nr:.3f}; "
+    f"model harus menaikkannya)")
 out()
-
-out("== Opsi target kelas 'Pasti churn' (validasi) ==")
-out("target precision | ambang | pelanggan | % pelanggan | precision | % churner tertangkap")
-for pt in (0.80, 0.90, 0.95):
-    t = pick_high(vdata, pt, MIN_TIER)
-    if t is None:
-        out(f"{pt:>16.0%} | tidak tercapai dengan minimal {MIN_TIER} pelanggan")
-    else:
-        n, share, prec, rec = high_stats(vdata, t)
-        out(f"{pt:>16.0%} | {t:6.3f} | {n:9d} | {share:11.1%} | {prec:9.3f} | {rec:20.1%}")
-out()
-out("== Opsi target kelas 'Pasti tidak churn' (validasi) ==")
-out("target NPV | ambang | pelanggan | % pelanggan | NPV | churner yang lolos")
-for nt in (0.80, 0.90, 0.95):
-    t = pick_low(vdata, nt, MIN_TIER)
+out("== Opsi target 'Pasti tidak churn' (validasi, di luar aturan) ==")
+out("target NPV | ambang | pelanggan | NPV | churner yang lolos")
+for nt in (0.95, 0.97, 0.99):
+    t = pick_low(vdata_nr, nt, MIN_TIER)
     if t is None:
         out(f"{nt:>9.0%} | tidak tercapai dengan minimal {MIN_TIER} pelanggan")
     else:
-        n, share, npv, fn = low_stats(vdata, t)
-        out(f"{nt:>9.0%} | {t:6.3f} | {n:9d} | {share:11.1%} | {npv:.3f} | {fn}")
+        n, share, npv, fn = low_stats(vdata_nr, t)
+        out(f"{nt:>9.0%} | {t:6.3f} | {n:9d} | {npv:.3f} | {fn}")
 out()
 
-t_hi = pick_high(vdata, PRECISION_TARGET, MIN_TIER)
-t_lo = pick_low(vdata, NPV_TARGET, MIN_TIER)
-if t_hi is None:
-    out(f"PERINGATAN: target precision {PRECISION_TARGET:.0%} tidak tercapai. Kelas 'Pasti churn' dikosongkan.")
-    t_hi = 1.01
+t_hi = RULE_SCORE - 0.5   # "Pasti churn" = baris berstatus aturan
+t_lo = pick_low(vdata_nr, NPV_TARGET, MIN_TIER)
 if t_lo is None:
     out(f"PERINGATAN: target NPV {NPV_TARGET:.0%} tidak tercapai. Kelas 'Pasti tidak churn' dikosongkan.")
     t_lo = -0.01
-if t_lo >= t_hi:
-    out("PERINGATAN: ambang bawah >= ambang atas. Longgarkan target precision/NPV.")
-out(f"Ambang dipakai (precision {PRECISION_TARGET:.0%}, NPV {NPV_TARGET:.0%}): atas {t_hi:.3f}, bawah {t_lo:.3f}")
+out(f"Ambang dipakai: NPV target {NPV_TARGET:.0%}, ambang bawah skor {t_lo:.3f}")
 out()
 tier_of = make_tier_fn(t_hi, t_lo)
 
@@ -153,21 +149,26 @@ def print_tiers(rows, title, with_ci=False):
 
 print_tiers(tier_rows(vdata, tier_of), "== Kelas risiko pada data validasi (dipakai memilih ambang) ==")
 
-out("== Skor vs churn aktual per desil (validasi) ==")
-for d, mp, my in deciles(vdata):
+out("== Skor vs churn aktual per desil (validasi, di luar aturan) ==")
+for d, mp, my in deciles(vdata_nr):
     out(f"desil {d:2d}: rata-rata skor {mp:.3f} | churn aktual {my:.3f}")
 out()
 
 # ---------- 3. Evaluasi akhir di data test (sekali) ----------
 test_pred = add_score(model.transform(test)).cache()
-tdata = [(r["p"], r["label"]) for r in test_pred.select("p", "label").collect()]
+tdata = [
+    (RULE_SCORE if r["rule_any"] == 1 else r["p"], r["label"])
+    for r in test_pred.select("p", "label", "rule_any").collect()
+]
 trows = tier_rows(tdata, tier_of)
 print_tiers(trows, f"== EVALUASI AKHIR di data test ({best}) ==", with_ci=True)
 
-brier = test_pred.select(F.avg((F.col("p") - F.col("label")) ** 2)).first()[0]
+test_nr = test_pred.filter(F.col("rule_any") == 0)
+brier = test_nr.select(F.avg((F.col("p") - F.col("label")) ** 2)).first()[0]
 out(
-    f"PR-AUC test {ev_pr.evaluate(test_pred):.4f} | ROC-AUC test {ev_roc.evaluate(test_pred):.4f} "
-    f"| Brier {brier:.4f}"
+    f"Model di luar aturan (test): PR-AUC {ev_pr.evaluate(test_nr):.4f} "
+    f"(pembanding acak = prevalensi {test_nr.filter('label = 1').count() / test_nr.count():.3f}) | "
+    f"ROC-AUC {ev_roc.evaluate(test_nr):.4f} | Brier {brier:.4f}"
 )
 test_pos = sum(1 for _, y in tdata if y == 1.0)
 flagged_pos = sum(1 for p, y in tdata if y == 1.0 and tier_of(p) != "Pasti tidak churn")
@@ -182,7 +183,8 @@ out(f"Tingkat churn aktual naik konsisten antarkelas: {'ya' if mono else 'TIDAK'
 out()
 
 # ---------- 4. Uji bias (untuk lembar kepatuhan & etika) ----------
-tp = test_pred.select("gender", "age", "label", "p").toPandas()
+tp = test_pred.select("gender", "age", "label", "p", "rule_any").toPandas()
+tp["p"] = tp["p"].where(tp["rule_any"] == 0, RULE_SCORE)
 tp["flag"] = tp["p"].map(tier_of) != "Pasti tidak churn"
 tp["age_group"] = pd.cut(tp["age"], [0, 29, 44, 200], labels=["<30", "30-44", "45+"])
 
@@ -209,11 +211,11 @@ all_scored = (
     add_score(model.transform(df))
     .withColumn(
         "tier",
-        F.when(F.col("p") >= t_hi, "Pasti churn")
+        F.when(F.col("rule_any") == 1, "Pasti churn")
         .when(F.col("p") <= t_lo, "Pasti tidak churn")
         .otherwise("Akan churn"),
     )
-    .select(ID_COL, "split", *NUM, *CAT, LABEL, F.col("p").alias("score"), "tier")
+    .select(ID_COL, "split", *NUM, *CAT, "rule_any", LABEL, F.col("p").alias("score"), "tier")
 )
 Path("data/scored").mkdir(parents=True, exist_ok=True)
 all_scored.toPandas().to_parquet(SCORED, index=False)
@@ -224,7 +226,8 @@ all_scored.toPandas().to_parquet(SCORED, index=False)
     .toPandas()
     .to_csv(TIER_SUMMARY, index=False)
 )
-out("Catatan: skor pada baris split 'train' bersifat in-sample (model sudah melihat baris itu).")
+out("Catatan: skor model hanya bermakna untuk baris rule_any = 0 (kelas 'Pasti churn' ditentukan aturan).")
+out("Skor pada baris split 'train' bersifat in-sample (model sudah melihat baris itu).")
 out("Untuk dashboard keputusan, gunakan baris split 'valid' dan 'test' sebagai acuan akurasi.")
 
 Path("docs").mkdir(exist_ok=True)

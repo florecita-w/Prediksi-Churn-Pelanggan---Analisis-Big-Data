@@ -6,35 +6,35 @@ Menebak semua 'churn'      : recall 100%, precision 0.565, specificity 0%
 Menebak semua 'tidak churn': accuracy 0.435
 PR-AUC model acak          : 0.565 (model harus jauh di atas ini)
 
-=== Logistic Regression (data validasi, 12 detik) ===
-ROC-AUC : 0.960
-PR-AUC  : 0.974  (acak = 0.565)
-Ambang 0.500                   -> precision 0.923 | recall 0.888 | specificity 0.904 | F1 0.905 | accuracy 0.895
-Ambang 0.919 (recall >= 70%)   -> precision 0.998 | recall 0.700 | specificity 0.998 | F1 0.823 | accuracy 0.830
+=== Logistic Regression (data validasi, 15 detik) ===
+ROC-AUC : 0.995
+PR-AUC  : 0.997  (acak = 0.565)
+Ambang 0.500                   -> precision 1.000 | recall 0.961 | specificity 1.000 | F1 0.980 | accuracy 0.978
+Ambang 1.000 (recall >= 70%)   -> precision 1.000 | recall 0.700 | specificity 1.000 | F1 0.824 | accuracy 0.831
 Teratas (|koefisien| pada fitur terstandardisasi):
-    support_calls                    2.171
-    contract_length_oh_Monthly       1.948
-    total_spend                      1.386
-    payment_delay                    0.879
-    contract_length_oh_Quarterly     0.793
-    contract_length_oh_Annual        0.790
-    last_interaction                 0.505
-    age                              0.426
+    rule_any                         3.015
+    support_calls                    2.489
+    age_hi_pure                      1.356
+    total_spend_lo_pure              1.081
+    age                              0.921
+    last_interaction                 0.917
+    payment_delay_hi_pure            0.909
+    is_monthly                       0.519
 
-=== Random Forest (data validasi, 51 detik) ===
-ROC-AUC : 0.999
-PR-AUC  : 0.999  (acak = 0.565)
-Ambang 0.500                   -> precision 1.000 | recall 0.979 | specificity 1.000 | F1 0.989 | accuracy 0.988
-Ambang 0.986 (recall >= 70%)   -> precision 1.000 | recall 0.701 | specificity 1.000 | F1 0.824 | accuracy 0.831
+=== Random Forest (data validasi, 42 detik) ===
+ROC-AUC : 1.000
+PR-AUC  : 1.000  (acak = 0.565)
+Ambang 0.500                   -> precision 1.000 | recall 0.983 | specificity 1.000 | F1 0.991 | accuracy 0.990
+Ambang 1.000 (recall >= 70%)   -> precision 1.000 | recall 0.852 | specificity 1.000 | F1 0.920 | accuracy 0.916
 Teratas (kepentingan fitur):
-    support_calls                    0.296
-    total_spend                      0.213
-    contract_length_oh_Monthly       0.140
-    payment_delay                    0.128
-    age                              0.112
-    last_interaction                 0.050
-    gender_oh_Male                   0.017
-    gender_oh_Female                 0.016
+    rule_any                         0.408
+    support_calls                    0.119
+    support_calls_hi_pure            0.092
+    total_spend_lo_pure              0.077
+    total_spend                      0.069
+    payment_delay_hi_pure            0.034
+    contract_length_oh_Monthly       0.034
+    is_monthly                       0.034
 
 Catatan: skor sangat tinggi (ROC-AUC mendekati 1) pada data seperti ini patut dicurigai
 berasal dari aturan pembuatan data yang sederhana. Laporkan sebagai keterbatasan,

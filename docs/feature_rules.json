@@ -1,0 +1,18 @@
+{
+  "age": {
+    "lo_max": null,
+    "hi_min": 51
+  },
+  "support_calls": {
+    "lo_max": null,
+    "hi_min": 6
+  },
+  "payment_delay": {
+    "lo_max": null,
+    "hi_min": 21
+  },
+  "total_spend": {
+    "lo_max": 499,
+    "hi_min": null
+  }
+}
