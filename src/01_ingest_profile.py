@@ -119,6 +119,5 @@ def main() -> None:
     print(f"\nParquet tersimpan: {parquet_path} ({back.shape[0]} baris)")
     print("Ringkasan tersimpan: docs/data_profile.txt")
 
-
 if __name__ == "__main__":
     main()

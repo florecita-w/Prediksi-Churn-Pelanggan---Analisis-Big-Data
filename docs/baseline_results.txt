@@ -1,0 +1,41 @@
+Train: 308621 baris, churn 175232 (56.8%)
+Valid: 66486 baris, churn 37542 (56.5%)
+
+== Pembanding sederhana (data validasi) ==
+Menebak semua 'churn'      : recall 100%, precision 0.565, specificity 0%
+Menebak semua 'tidak churn': accuracy 0.435
+PR-AUC model acak          : 0.565 (model harus jauh di atas ini)
+
+=== Logistic Regression (data validasi, 12 detik) ===
+ROC-AUC : 0.960
+PR-AUC  : 0.974  (acak = 0.565)
+Ambang 0.500                   -> precision 0.923 | recall 0.888 | specificity 0.904 | F1 0.905 | accuracy 0.895
+Ambang 0.919 (recall >= 70%)   -> precision 0.998 | recall 0.700 | specificity 0.998 | F1 0.823 | accuracy 0.830
+Teratas (|koefisien| pada fitur terstandardisasi):
+    support_calls                    2.171
+    contract_length_oh_Monthly       1.948
+    total_spend                      1.386
+    payment_delay                    0.879
+    contract_length_oh_Quarterly     0.793
+    contract_length_oh_Annual        0.790
+    last_interaction                 0.505
+    age                              0.426
+
+=== Random Forest (data validasi, 51 detik) ===
+ROC-AUC : 0.999
+PR-AUC  : 0.999  (acak = 0.565)
+Ambang 0.500                   -> precision 1.000 | recall 0.979 | specificity 1.000 | F1 0.989 | accuracy 0.988
+Ambang 0.986 (recall >= 70%)   -> precision 1.000 | recall 0.701 | specificity 1.000 | F1 0.824 | accuracy 0.831
+Teratas (kepentingan fitur):
+    support_calls                    0.296
+    total_spend                      0.213
+    contract_length_oh_Monthly       0.140
+    payment_delay                    0.128
+    age                              0.112
+    last_interaction                 0.050
+    gender_oh_Male                   0.017
+    gender_oh_Female                 0.016
+
+Catatan: skor sangat tinggi (ROC-AUC mendekati 1) pada data seperti ini patut dicurigai
+berasal dari aturan pembuatan data yang sederhana. Laporkan sebagai keterbatasan,
+bukan sebagai bukti model hebat.
