@@ -18,9 +18,9 @@ Seluruh anggota bertanggung jawab atas QA, dokumentasi, dan kepatuhan (profil ku
 
 | Peran | Dataset | Catatan |
 |---|---|---|
-| Primer | Customer Churn Dataset (Kaggle: `samuelsemaya/e-commerce-customer-churn`) | Penyedia asli: Muhammad Shahid Azeem. Asal data (nyata/sintetis) tidak dijelaskan pada deskripsinya |
-| Sekunder | Marketing Campaign Performance Dataset (Kaggle, Manisha Bhattacharjee) | 200.000 baris, 16 kolom, CC0. Hanya konteks, tidak dapat digabung per pelanggan |
-| Sekunder | Customer Service Interaction Dataset (Kaggle, Bhrami Zadafiya) | 10.000 baris, 13 kolom, CDLA-Sharing 1.0. Hanya konteks |
+| Primer | Customer Churn Dataset (Kaggle: `muhammadshahidazeem/customer-churn-dataset`) | Penyedia: Muhammad Shahid Azeem. Lisensi GPL 2. Dua file: training 440.833 baris dan testing 64.374 baris, masing-masing 12 kolom. Penyedia menyatakan data kemungkinan simulasi/anonim |
+| Sekunder | Marketing Campaign Performance Dataset (Kaggle: `manishabhatt22/marketing-campaign-performance-dataset`) | Penyedia: Manisha Bhattacharjee. 200.000 baris, 16 kolom, CC0. Dinyatakan fiktif oleh penyedia. Hanya konteks, tidak dapat digabung per pelanggan |
+| Sekunder | Customer Service Interaction Dataset (Kaggle: `zadafiyabhrami/customer-service-ineraction-dataset`) | Penyedia: Bhrami Zadafiya. 10.000 baris, 13 kolom, CDLA-Sharing 1.0. Dinyatakan sintetis oleh penyedia. Hanya konteks. Ejaan `ineraction` pada alamat memang demikian, jangan dikoreksi |
 
 Data **tidak disimpan di repositori ini**. Setiap anggota mengunduhnya sendiri (lihat bagian Setup).
 
@@ -47,6 +47,15 @@ Data **tidak disimpan di repositori ini**. Setiap anggota mengunduhnya sendiri (
 `Unduh (Kaggle)` -> `raw` -> `curated (Parquet)` -> `persiapan data` -> `EDA` -> `rekayasa fitur` -> `model (Logistic Regression, Random Forest)` -> `evaluasi` -> `skor risiko` -> `Dashboard CRM`
 
 Target utama: **recall minimal 70%**, dengan metrik pendukung Precision, F1-Score, ROC-AUC, dan PR-AUC.
+
+## Catatan Penting Data Primer
+
+Baca sebelum menulis kode apa pun, supaya tidak mengulang kesalahan yang sudah ditemukan di Bab IV dan V laporan:
+
+- **`CustomerID` tidak dipakai sebagai fitur.** ID tidak konsisten antara file training dan testing, dan pada training berkorelasi kuat dengan `Churn` (r = -0,84) karena terkait urutan baris. Model memakai 10 fitur lain.
+- **Urutan baris training tidak acak.** Baris-baris awal hampir seluruhnya berstatus churn. Acak data (`shuffle`) sebelum membagi data, dan jangan memakai `head()` sebagai cuplikan yang dianggap mewakili data.
+- **Training memiliki 1 baris kosong total** (baris ke-199.297 pada file). Buang baris ini sebelum mengonversi tipe data.
+- **Training dan testing berbeda sebaran** (proporsi churn 56,71% dan 47,37%). Training dibagi menjadi train-fit (80%) dan train-validation (20%, *stratified*). Data testing tidak disentuh sampai evaluasi akhir, dan hasil utama dilaporkan dari testing.
 
 ## Setup
 
@@ -113,24 +122,42 @@ Ambil API token di akun Kaggle Anda (**Settings** -> bagian **API**) dan ikuti p
 
 **Jangan pernah meng-commit token ini.** File tersebut sudah dimasukkan ke `.gitignore`.
 
-### 7. Unduh data primer
+### 7. Unduh data
+
+Data primer (satu unduhan berisi dua file CSV: training dan testing):
 
 ```bash
-kaggle datasets download -d samuelsemaya/e-commerce-customer-churn -p data/raw --unzip
+kaggle datasets download -d muhammadshahidazeem/customer-churn-dataset -p data/raw --unzip
+```
+
+Data sekunder (masing-masing satu file CSV):
+
+```bash
+kaggle datasets download -d manishabhatt22/marketing-campaign-performance-dataset -p data/raw --unzip
+kaggle datasets download -d zadafiyabhrami/customer-service-ineraction-dataset -p data/raw --unzip
 ```
 
 Jika CLI bermasalah, unduh manual dari halaman dataset di browser, ekstrak, lalu letakkan file di `data/raw/`.
 
-Dataset sekunder diunduh dengan cara yang sama, masing-masing sebagai satu file CSV (cek slug pada tautan Kaggle-nya).
-
 ### 8. Verifikasi
 
 ```bash
-python -c "import os; print(os.listdir('data/raw'))"
-python -c "import pandas as pd, glob; f=glob.glob('data/raw/*.csv')[0]; df=pd.read_csv(f); print(f); print(df.shape); print(df.head()); print(df.dtypes)"
+python -c "import os; print(sorted(os.listdir('data/raw')))"
+python -c "import pandas as pd, glob; [print(f, pd.read_csv(f).shape) for f in sorted(glob.glob('data/raw/*.csv'))]"
 ```
 
-Catat nama file dan jumlah baris di `docs/provenance.md`.
+Hasilnya harus cocok dengan tabel berikut:
+
+| File | Ukuran yang diharapkan (baris, kolom) |
+|---|---|
+| `customer_churn_dataset-training-master.csv` | (440833, 12), termasuk 1 baris kosong total |
+| `customer_churn_dataset-testing-master.csv` | (64374, 12) |
+| `marketing_campaign_dataset.csv` | (200000, 16) |
+| `customer_service_interactions.csv` | (10000, 13) |
+
+Jika ukuran berbeda, kemungkinan dataset yang terunduh salah atau versinya berubah. Hentikan dan periksa sebelum melanjutkan.
+
+Catat nama file, jumlah baris, dan **tanggal unduh** di `docs/provenance.md`.
 
 ## Alur Kerja Git
 
@@ -152,6 +179,6 @@ Catat nama file dan jumlah baris di `docs/provenance.md`.
 
 ## Catatan Etika & Keterbatasan
 
-- Asal-usul data primer tidak dijelaskan pada deskripsinya (nyata atau sintetis). Hal ini dicatat di `docs/provenance.md`.
-- Dataset sekunder bersifat konteks dan tidak digabung ke data pelanggan primer.
-- Pengujian bias (per gender dan kelompok usia) dilakukan dan didokumentasikan di lembar kepatuhan dan etika.
+- Penyedia data primer menyatakan data kemungkinan bersifat simulasi/anonim, sehingga keaslian terhadap data pelanggan nyata tidak dapat diverifikasi secara independen. Hal ini dicatat di `docs/provenance.md`.
+- Kedua dataset sekunder dinyatakan fiktif/sintetis oleh penyedianya. Keduanya bersifat konteks dan tidak digabung ke data pelanggan primer.
+- Pengujian bias (per gender dan kelompok usia) direncanakan dan akan didokumentasikan di lembar kepatuhan dan etika (Pertemuan 15).
