@@ -1,7 +1,10 @@
-pandas
+pandas<3
+pyarrow
 pyspark
-kaggle
-ipykernel
+scikit-learn
+matplotlib
 seaborn
 plotly
-scikit-learn
+streamlit
+ipykernel
+kaggle

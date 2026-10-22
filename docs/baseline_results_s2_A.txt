@@ -1,0 +1,41 @@
+Train: 41207 baris, churn 19550 (47.4%)
+Valid: 10380 baris, churn 4936 (47.6%)
+
+== Pembanding sederhana (data validasi) ==
+Menebak semua 'churn'      : recall 100%, precision 0.476, specificity 0%
+Menebak semua 'tidak churn': accuracy 0.524
+PR-AUC model acak          : 0.476 (model harus jauh di atas ini)
+
+=== Logistic Regression (data validasi, 6 detik) ===
+ROC-AUC : 0.908
+PR-AUC  : 0.900  (acak = 0.476)
+Ambang 0.500                   -> precision 0.816 | recall 0.827 | specificity 0.831 | F1 0.821 | accuracy 0.829
+Ambang 0.662 (recall >= 70%)   -> precision 0.875 | recall 0.700 | specificity 0.910 | F1 0.778 | accuracy 0.810
+Teratas (|koefisien| pada fitur terstandardisasi):
+    payment_delay                    1.837
+    support_calls                    1.005
+    tenure                           0.580
+    usage_frequency                  0.499
+    gender_oh_Male                   0.278
+    gender_oh_Female                 0.278
+    total_spend                      0.263
+    age                              0.253
+
+=== Random Forest (data validasi, 17 detik) ===
+ROC-AUC : 1.000
+PR-AUC  : 1.000  (acak = 0.476)
+Ambang 0.500                   -> precision 0.992 | recall 0.993 | specificity 0.992 | F1 0.992 | accuracy 0.993
+Ambang 0.945 (recall >= 70%)   -> precision 1.000 | recall 0.700 | specificity 1.000 | F1 0.824 | accuracy 0.858
+Teratas (kepentingan fitur):
+    payment_delay                    0.466
+    support_calls                    0.169
+    tenure                           0.103
+    usage_frequency                  0.085
+    total_spend                      0.038
+    gender_oh_Male                   0.038
+    age                              0.035
+    gender_oh_Female                 0.029
+
+Catatan: skor sangat tinggi (ROC-AUC mendekati 1) pada data seperti ini patut dicurigai
+berasal dari aturan pembuatan data yang sederhana. Laporkan sebagai keterbatasan,
+bukan sebagai bukti model hebat.

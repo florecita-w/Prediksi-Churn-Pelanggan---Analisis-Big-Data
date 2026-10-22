@@ -1,0 +1,10 @@
+split,tier,pelanggan,churn_aktual_pct
+test,Akan churn,363,73.83
+test,Pasti churn,5728,99.9
+test,Pasti tidak churn,6696,0.25
+train,Akan churn,903,77.52
+train,Pasti churn,18857,99.96
+train,Pasti tidak churn,21447,0.0
+valid,Akan churn,297,76.77
+valid,Pasti churn,4707,99.92
+valid,Pasti tidak churn,5376,0.09

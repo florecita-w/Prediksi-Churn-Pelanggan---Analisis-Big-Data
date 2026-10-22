@@ -5,13 +5,13 @@ Baris x kolom : 440833 x 12
 == Tipe data ==
 customer_id          float64
 age                  float64
-gender                   str
+gender                object
 tenure               float64
 usage_frequency      float64
 support_calls        float64
 payment_delay        float64
-subscription_type        str
-contract_length          str
+subscription_type     object
+contract_length       object
 total_spend          float64
 last_interaction     float64
 churn                float64

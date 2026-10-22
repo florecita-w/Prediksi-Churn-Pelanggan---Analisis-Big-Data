@@ -3,16 +3,26 @@
 Jalankan dari root proyek (venv aktif), SETELAH 01_ingest_profile.py berhasil:
     python src/02_spark_pipeline.py
 
-Masukan : data/curated/churn.parquet
-Keluaran: data/model_ready/churn_split.parquet  (kolom 'split': train / valid / test)
+Masukan : data/curated/churn.parquet       (training asli, 440.833 baris)
+          data/curated/churn_test.parquet  (testing asli, 64.374 baris, berlabel)
+Keluaran: data/model_ready/churn_split.parquet  (kolom 'split': train / valid / test,
+          kolom 'source': training / testing = asal file; dipakai skenario 2)
+
+Skema split (sesuai laporan Bab 6.1.3):
+    training asli -> train (80%) + valid (20%)   diacak lewat hash customer_id
+    testing asli  -> test, dipakai UTUH, hanya untuk evaluasi akhir
 
 Catatan desain:
-- Split memakai hash customer_id (bukan rand): hasilnya sama di setiap perangkat dan setiap
-  dijalankan, dan tidak butuh window global sehingga tetap efisien di data besar.
-- Karena datanya besar, pembagian tiga split hampir stratified. Tabel akhir menunjukkan
-  proporsi churn di tiap split sebagai buktinya.
-- Encoding dan standardisasi TIDAK dilakukan di sini, melainkan di dalam Pipeline model
-  (skrip 03), supaya hanya belajar dari data train.
+- Split train/valid memakai hash customer_id (bukan rand): hasilnya sama di setiap perangkat
+  dan setiap dijalankan, serta tidak butuh window global sehingga tetap efisien di data besar.
+  Urutan baris training berkorelasi dengan label, tetapi hash mengacak, jadi aman.
+- Proporsi churn tiap split dicetak di akhir sebagai bukti bahwa train dan valid seimbang.
+- Testing sengaja TIDAK digabung dengan training: sebarannya berbeda (churn 47,4% vs 56,7%)
+  dan perbedaan itulah yang menunjukkan kinerja model pada data baru.
+- Pembersihan dilakukan terpisah per file. ID pelanggan tidak dianggap ganda lintas file,
+  karena nomor ID di training dan testing tidak saling berkaitan.
+- Encoding dan standardisasi TIDAK dilakukan di sini, melainkan di dalam Pipeline model,
+  supaya hanya belajar dari data train.
 """
 import shutil
 from pathlib import Path
@@ -20,54 +30,73 @@ from pathlib import Path
 from pyspark.sql import Window
 from pyspark.sql import functions as F
 
-from churn_common import CAT, CURATED, ID_COL, LABEL, MODEL_READY, NUM, SEED, get_spark
+from churn_common import (
+    CAT,
+    CURATED,
+    CURATED_TEST,
+    ID_COL,
+    LABEL,
+    MODEL_READY,
+    NUM,
+    SEED,
+    get_spark,
+)
 
-TRAIN_PCT, VALID_PCT = 70, 15  # sisanya (15) menjadi test
+TRAIN_PCT = 80  # sisanya (20) menjadi valid; testing asli menjadi test
 
 spark = get_spark("churn-prep")
 print("Versi Spark:", spark.version)
 
-df = spark.read.parquet(CURATED)
-n_raw = df.count()
-print(f"\nBaris mentah: {n_raw}")
 
-# ---------- 1. Baris kosong ----------
-df = df.dropna(how="any")
-n_clean = df.count()
-print(f"Baris dengan nilai kosong yang dibuang: {n_raw - n_clean}")
+def bersihkan(df, nama):
+    """Validasi dan pembersihan satu file. Mengembalikan DataFrame bersih."""
+    print(f"\n===== {nama} =====")
+    n_raw = df.count()
+    print(f"Baris mentah: {n_raw}")
 
-# ---------- 2. Tipe data ----------
-for c in NUM:
-    df = df.withColumn(c, F.col(c).cast("double"))
-df = df.withColumn(ID_COL, F.col(ID_COL).cast("long")).withColumn(LABEL, F.col(LABEL).cast("int"))
+    df = df.dropna(how="any")
+    n_clean = df.count()
+    print(f"Baris dengan nilai kosong yang dibuang: {n_raw - n_clean}")
 
-# ---------- 3. Pemeriksaan kualitas ----------
-dup_full = n_clean - df.dropDuplicates().count()
-dup_id = n_clean - df.select(ID_COL).distinct().count()
-print(f"Duplikat penuh      : {dup_full}")
-print(f"ID pelanggan ganda  : {dup_id}")
-if dup_id > 0:
-    print("  -> ID ganda dibuang (dipertahankan satu baris per ID)")
-    df = df.dropDuplicates([ID_COL])
+    for c in NUM:
+        df = df.withColumn(c, F.col(c).cast("double"))
+    df = df.withColumn(ID_COL, F.col(ID_COL).cast("long")).withColumn(LABEL, F.col(LABEL).cast("int"))
 
-neg_expr = " OR ".join(f"{c} < 0" for c in NUM)
-print(f"Baris dengan nilai numerik negatif: {df.filter(neg_expr).count()}")
-bad_label = df.filter(~F.col(LABEL).isin(0, 1)).count()
-print(f"Baris dengan label di luar 0/1     : {bad_label}")
-if bad_label:
-    raise SystemExit("Label churn berisi nilai selain 0/1. Periksa data sebelum lanjut.")
+    dup_full = n_clean - df.dropDuplicates().count()
+    dup_id = n_clean - df.select(ID_COL).distinct().count()
+    print(f"Duplikat penuh      : {dup_full}")
+    print(f"ID pelanggan ganda  : {dup_id}")
+    if dup_id > 0:
+        print("  -> ID ganda dibuang (dipertahankan satu baris per ID)")
+        df = df.dropDuplicates([ID_COL])
 
-n_final = df.count()
-print(f"\nBaris siap dipakai: {n_final}")
+    neg_expr = " OR ".join(f"{c} < 0" for c in NUM)
+    print(f"Baris dengan nilai numerik negatif: {df.filter(neg_expr).count()}")
+    bad_label = df.filter(~F.col(LABEL).isin(0, 1)).count()
+    print(f"Baris dengan label di luar 0/1     : {bad_label}")
+    if bad_label:
+        raise SystemExit(f"Label churn di {nama} berisi nilai selain 0/1. Periksa data sebelum lanjut.")
 
-# ---------- 4. Split deterministik berbasis hash ID ----------
+    print(f"Baris siap dipakai: {df.count()}")
+    return df
+
+
+# ---------- 1-3. Muat dan bersihkan, per file ----------
+if not Path(CURATED_TEST).exists():
+    raise SystemExit(f"{CURATED_TEST} belum ada. Jalankan python src/01_ingest_profile.py dulu "
+                     "(file testing harus ada di data/raw).")
+train_full = bersihkan(spark.read.parquet(CURATED), "TRAINING asli")
+test = bersihkan(spark.read.parquet(CURATED_TEST), "TESTING asli")
+
+# ---------- 4. Split ----------
+# training: hash ID -> 80% train, 20% valid. testing: seluruhnya test.
 bucket = F.pmod(F.xxhash64(F.col(ID_COL), F.lit(SEED)), F.lit(100))
-df = df.withColumn(
-    "split",
-    F.when(bucket < TRAIN_PCT, "train")
-    .when(bucket < TRAIN_PCT + VALID_PCT, "valid")
-    .otherwise("test"),
+train_full = (
+    train_full.withColumn("split", F.when(bucket < TRAIN_PCT, "train").otherwise("valid"))
+    .withColumn("source", F.lit("training"))
 )
+test = test.withColumn("split", F.lit("test")).withColumn("source", F.lit("testing"))
+df = train_full.unionByName(test)
 
 # ---------- 5. Simpan ----------
 out_path = Path(MODEL_READY)
@@ -90,7 +119,7 @@ except Exception as exc:  # umum di Windows tanpa winutils/hadoop.dll
 # ---------- 6. Verifikasi ----------
 chk = spark.read.parquet(MODEL_READY)
 print(f"\nBaris tersimpan: {chk.count()}")
-print("\nProporsi churn per split:")
+print("\nProporsi churn per split (train dan valid harus mirip; test memang berbeda):")
 (
     chk.groupBy("split")
     .agg(

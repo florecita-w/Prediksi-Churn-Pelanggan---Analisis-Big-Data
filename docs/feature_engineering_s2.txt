@@ -1,0 +1,31 @@
+== Skenario 2 ==
+Train: 41207 baris
+Valid: 10380 baris
+Test: 12787 baris
+
+== Ekor murni (hanya dari data train) ==
+age               churn-murni: nilai <= None | nilai >= None   (tidak-churn-murni: <= None | >= None)
+support_calls     churn-murni: nilai <= None | nilai >= None   (tidak-churn-murni: <= None | >= None)
+payment_delay     churn-murni: nilai <= None | nilai >= None   (tidak-churn-murni: <= None | >= None)
+total_spend       churn-murni: nilai <= None | nilai >= None   (tidak-churn-murni: <= None | >= None)
+
+== Churn rate di kelompok rule_any = 1 vs 0, per split ==
+split  rule_any     n  churn_rate
+ test       0.0  8392      0.4474
+ test       1.0  4395      0.5124
+train       0.0 27063      0.4533
+train       1.0 14144      0.5149
+valid       0.0  6789      0.4493
+valid       1.0  3591      0.5252
+
+== Churn rate per flag (train/valid/test) ==
+is_monthly: test n=4395 churn=0.5124; valid n=3591 churn=0.5252; train n=14144 churn=0.5149
+
+== Churn rate per gender pada pelanggan di luar aturan (train, rule_any = 0) ==
+gender     n  churn_rate
+Female 14181      0.5127
+  Male 12882      0.3878
+Jika selisih gender masih besar di sini, gender punya pengaruh sendiri; jika mengecil, selisih itu sebagian besar efek fitur lain.
+
+Spark gagal menulis Parquet (Py4JJavaError). Memakai cadangan pandas.
+Tersimpan lewat pandas: data/model_ready/churn_features_s2.parquet

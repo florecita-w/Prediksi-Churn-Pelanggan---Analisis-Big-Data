@@ -4,7 +4,7 @@ Jalankan dari root proyek (venv aktif), setelah 02_spark_pipeline.py berhasil:
     python src/03_train_baseline.py
 
 Masukan : data/model_ready/churn_split.parquet
-Keluaran: ringkasan di terminal + docs/baseline_results.txt
+Keluaran: ringkasan di terminal + docs/baseline_results_s{N}_{A|B}.txt
 
 Catatan desain:
 - Encoding dan standardisasi ada DI DALAM Pipeline, jadi hanya belajar dari data train.
@@ -21,6 +21,9 @@ from pyspark.ml.evaluation import BinaryClassificationEvaluator
 from pyspark.sql import functions as F
 
 from churn_common import (
+    SCEN,
+    run_tag,
+    use_fe,
     MODEL_NAMES,
     add_score,
     build_pipeline,
@@ -42,6 +45,7 @@ def out(text: str = "") -> None:
 
 
 spark = get_spark("churn-baseline")
+print(f"Skenario {SCEN} | " + ("Model B (+ fitur turunan)" if use_fe() else "Model A (10 fitur asli)"))
 df = load_split(spark)
 train = df.filter(F.col("split") == "train").cache()
 valid = df.filter(F.col("split") == "valid").cache()  # data test sengaja tidak dipakai
@@ -111,6 +115,7 @@ out("berasal dari aturan pembuatan data yang sederhana. Laporkan sebagai keterba
 out("bukan sebagai bukti model hebat.")
 
 Path("docs").mkdir(exist_ok=True)
-Path("docs/baseline_results.txt").write_text("\n".join(lines), encoding="utf-8")
-print("\nRingkasan tersimpan: docs/baseline_results.txt")
+out_file = f"docs/baseline_results{run_tag()}.txt"
+Path(out_file).write_text("\n".join(lines), encoding="utf-8")
+print(f"\nRingkasan tersimpan: {out_file}")
 spark.stop()

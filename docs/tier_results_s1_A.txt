@@ -1,0 +1,67 @@
+Skenario 1 | Model A (10 fitur asli)
+Target: precision 'Pasti churn' 99%, NPV 'Pasti tidak churn' 99%
+Train 353026 | Valid 87806 | Test 64374 [test dikunci sampai evaluasi akhir]
+
+== Pemilihan model (data validasi) ==
+Logistic Regression  PR-AUC 0.9743 | ROC-AUC 0.9598
+Random Forest        PR-AUC 0.9994 | ROC-AUC 0.9989
+Model terpilih: Random Forest
+
+Prevalensi churn di validasi: 0.564
+
+== Opsi target kelas 'Pasti churn' (validasi) ==
+target precision | ambang | pelanggan | % pelanggan | precision | % churner tertangkap
+             80% |  0.046 |     61890 |       70.5% |     0.800 |                99.9%
+             90% |  0.056 |     54964 |       62.6% |     0.900 |                99.8%
+             95% |  0.068 |     52024 |       59.2% |     0.950 |                99.7%
+
+== Opsi target kelas 'Pasti tidak churn' (validasi) ==
+target NPV | ambang | pelanggan | % pelanggan | NPV | churner yang lolos
+      80% |  0.959 |     47806 |       54.4% | 0.800 | 9561
+      90% |  0.915 |     42494 |       48.4% | 0.900 | 4249
+      95% |  0.845 |     40247 |       45.8% | 0.950 | 2002
+
+PERINGATAN: ambang bawah >= ambang atas walau target sudah dinaikkan. Zona 'Akan churn' kosong.
+Ambang dipakai (precision 99.0%, NPV 99.0%): atas 0.159, bawah 0.169
+
+== Kelas risiko pada data validasi (dipakai memilih ambang) ==
+Pasti churn        n= 49746 (56.7%) | churn aktual  49249 =  99.0% | porsi seluruh churner  99.4%
+Akan churn         n=     0 ( 0.0%) | churn aktual      0 =   0.0% | porsi seluruh churner   0.0%
+Pasti tidak churn  n= 38060 (43.3%) | churn aktual    312 =   0.8% | porsi seluruh churner   0.6%
+
+== Skor vs churn aktual per desil (validasi) ==
+desil  1: rata-rata skor 0.031 | churn aktual 0.002
+desil  2: rata-rata skor 0.036 | churn aktual 0.002
+desil  3: rata-rata skor 0.042 | churn aktual 0.002
+desil  4: rata-rata skor 0.053 | churn aktual 0.009
+desil  5: rata-rata skor 0.534 | churn aktual 0.629
+desil  6: rata-rata skor 0.962 | churn aktual 1.000
+desil  7: rata-rata skor 0.995 | churn aktual 1.000
+desil  8: rata-rata skor 0.999 | churn aktual 1.000
+desil  9: rata-rata skor 1.000 | churn aktual 1.000
+desil 10: rata-rata skor 1.000 | churn aktual 1.000
+
+== EVALUASI AKHIR di data test (Random Forest) ==
+Pasti churn        n= 62154 (96.6%) | churn aktual  30447 =  49.0% | porsi seluruh churner  99.8% | 95% CI [48.6% - 49.4%]
+Akan churn         n=     0 ( 0.0%) | churn aktual      0 =   0.0% | porsi seluruh churner   0.0%
+Pasti tidak churn  n=  2220 ( 3.4%) | churn aktual     46 =   2.1% | porsi seluruh churner   0.2% | 95% CI [1.6% - 2.8%]
+
+PR-AUC test 0.5888 | ROC-AUC test 0.6861 | Brier 0.4619
+Churner yang masuk 'Pasti churn' + 'Akan churn': 30447 dari 30493 (99.8%); target slide >= 70%: tercapai
+Pembanding 'tebak semua churn' di test: precision 0.474, recall 1.000 (PR-AUC acak = 0.474)
+PR-AUC valid 0.9994 -> test 0.5888 (turun 0.4105); ROC-AUC test 0.6861
+Tingkat churn aktual naik konsisten antarkelas: TIDAK
+
+== Uji bias per gender (data test; ditandai = bukan 'Pasti tidak churn') ==
+gender           n  churn aktual  % ditandai   recall  precision
+Female       34353         0.550       0.978    0.999      0.562
+Male         30021         0.386       0.951    0.997      0.405
+
+== Uji bias per age_group (data test; ditandai = bukan 'Pasti tidak churn') ==
+age_group        n  churn aktual  % ditandai   recall  precision
+<30          15547         0.445       0.962    0.999      0.462
+30-44        19700         0.447       0.947    0.997      0.471
+45+          29127         0.507       0.980    0.999      0.517
+
+Catatan: skor pada baris split 'train' bersifat in-sample (model sudah melihat baris itu).
+Untuk dashboard keputusan, gunakan baris split 'valid' dan 'test' sebagai acuan akurasi.

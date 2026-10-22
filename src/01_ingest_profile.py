@@ -1,13 +1,12 @@
 """Tahap 1: baca CSV mentah, buat profil singkat, simpan Parquet terkurasi.
 
 Jalankan dari root proyek (venv aktif):
-    python src/01_ingest_profile.py
-    python src/01_ingest_profile.py nama_file.csv     # jika ada lebih dari satu CSV
+    python src/01_ingest_profile.py                    # training DAN testing sekaligus
+    python src/01_ingest_profile.py nama_file.csv      # satu file saja (disimpan sbg training)
 
-Keluaran:
-    - ringkasan di terminal
-    - docs/data_profile.txt   (salinan ringkasan, bisa dilampirkan di laporan)
-    - data/curated/churn.parquet
+Jika data/raw berisi file bernama '*training*' dan '*testing*', keduanya diproses:
+    training -> data/curated/churn.parquet       + docs/data_profile.txt
+    testing  -> data/curated/churn_test.parquet  + docs/data_profile_testing.txt
 """
 import re
 import sys
@@ -20,7 +19,8 @@ CURATED = Path("data/curated")
 DOCS = Path("docs")
 
 
-def pick_csv() -> Path:
+def pick_jobs():
+    """Daftar (csv, parquet, profil). Training dan testing diproses bila keduanya ada."""
     files = sorted(RAW.glob("*.csv"))
     if not files:
         sys.exit("Tidak ada file CSV di data/raw. Letakkan dataset di sana dulu.")
@@ -28,13 +28,20 @@ def pick_csv() -> Path:
         path = RAW / sys.argv[1]
         if not path.exists():
             sys.exit(f"File tidak ditemukan: {path}")
-        return path
-    if len(files) > 1:
-        print("Ada lebih dari satu CSV di data/raw:")
-        for f in files:
-            print("  -", f.name)
-        sys.exit("Jalankan ulang dengan nama file: python src/01_ingest_profile.py <nama_file.csv>")
-    return files[0]
+        return [(path, "churn.parquet", "data_profile.txt")]
+    train = [f for f in files if "training" in f.name.lower()]
+    test = [f for f in files if "testing" in f.name.lower()]
+    if len(train) == 1 and len(test) == 1:
+        return [
+            (train[0], "churn.parquet", "data_profile.txt"),
+            (test[0], "churn_test.parquet", "data_profile_testing.txt"),
+        ]
+    if len(files) == 1:
+        return [(files[0], "churn.parquet", "data_profile.txt")]
+    print("Ada lebih dari satu CSV di data/raw:")
+    for f in files:
+        print("  -", f.name)
+    sys.exit("Jalankan ulang dengan nama file: python src/01_ingest_profile.py <nama_file.csv>")
 
 
 def to_snake(name: str) -> str:
@@ -43,8 +50,7 @@ def to_snake(name: str) -> str:
     return re.sub(r"_+", "_", name).lower()
 
 
-def main() -> None:
-    path = pick_csv()
+def ingest(path: Path, parquet_name: str, profile_name: str) -> None:
     df = pd.read_csv(path)
     df.columns = [to_snake(c) for c in df.columns]
 
@@ -110,14 +116,21 @@ def main() -> None:
 
     CURATED.mkdir(parents=True, exist_ok=True)
     DOCS.mkdir(parents=True, exist_ok=True)
-    parquet_path = CURATED / "churn.parquet"
+    parquet_path = CURATED / parquet_name
     df.to_parquet(parquet_path, index=False)
     back = pd.read_parquet(parquet_path)
     assert back.shape == df.shape, "Jumlah baris/kolom Parquet tidak sama dengan CSV"
 
-    (DOCS / "data_profile.txt").write_text("\n".join(lines), encoding="utf-8")
+    (DOCS / profile_name).write_text("\n".join(lines), encoding="utf-8")
     print(f"\nParquet tersimpan: {parquet_path} ({back.shape[0]} baris)")
-    print("Ringkasan tersimpan: docs/data_profile.txt")
+    print(f"Ringkasan tersimpan: docs/{profile_name}")
+
+
+def main() -> None:
+    for path, parquet_name, profile_name in pick_jobs():
+        print(f"\n########## {path.name} ##########")
+        ingest(path, parquet_name, profile_name)
+
 
 if __name__ == "__main__":
     main()

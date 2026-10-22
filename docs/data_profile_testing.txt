@@ -1,0 +1,89 @@
+File          : customer_churn_dataset-testing-master.csv
+Ukuran file   : 3205.3 KB
+Baris x kolom : 64374 x 12
+
+== Tipe data ==
+customer_id           int64
+age                   int64
+gender               object
+tenure                int64
+usage_frequency       int64
+support_calls         int64
+payment_delay         int64
+subscription_type    object
+contract_length      object
+total_spend           int64
+last_interaction      int64
+churn                 int64
+
+== Missing value ==
+                   jumlah  persen
+customer_id             0     0.0
+age                     0     0.0
+gender                  0     0.0
+tenure                  0     0.0
+usage_frequency         0     0.0
+support_calls           0     0.0
+payment_delay           0     0.0
+subscription_type       0     0.0
+contract_length         0     0.0
+total_spend             0     0.0
+last_interaction        0     0.0
+churn                   0     0.0
+
+== Baris duplikat penuh: 0 ==
+
+== Distribusi churn ==
+       jumlah  persen
+churn                
+0       33881   52.63
+1       30493   47.37
+
+== Statistik numerik ==
+                    count      mean       std    min       25%      50%       75%      max
+customer_id       64374.0  32187.50  18583.32    1.0  16094.25  32187.5  48280.75  64374.0
+age               64374.0     41.97     13.92   18.0     30.00     42.0     54.00     65.0
+tenure            64374.0     31.99     17.10    1.0     18.00     33.0     47.00     60.0
+usage_frequency   64374.0     15.08      8.82    1.0      7.00     15.0     23.00     30.0
+support_calls     64374.0      5.40      3.11    0.0      3.00      6.0      8.00     10.0
+payment_delay     64374.0     17.13      8.85    0.0     10.00     19.0     25.00     30.0
+total_spend       64374.0    541.02    260.87  100.0    313.00    534.0    768.00   1000.0
+last_interaction  64374.0     15.50      8.64    1.0      8.00     15.0     23.00     30.0
+churn             64374.0      0.47      0.50    0.0      0.00      0.0      1.00      1.0
+
+== Nilai negatif per kolom numerik ==
+customer_id         0
+age                 0
+tenure              0
+usage_frequency     0
+support_calls       0
+payment_delay       0
+total_spend         0
+last_interaction    0
+churn               0
+
+== Kolom kategorikal ==
+[gender]
+gender
+Female    34353
+Male      30021
+
+[subscription_type]
+subscription_type
+Standard    21502
+Basic       21451
+Premium     21421
+
+[contract_length]
+contract_length
+Monthly      22130
+Annual       21410
+Quarterly    20834
+
+== Contoh 5 baris pertama ==
+   customer_id  age  gender  tenure  usage_frequency  support_calls  payment_delay subscription_type contract_length  total_spend  last_interaction  churn
+0            1   22  Female      25               14              4             27             Basic         Monthly          598                 9      1
+1            2   41  Female      28               28              7             13          Standard         Monthly          584                20      0
+2            3   47    Male      27               10              2             29           Premium          Annual          757                21      0
+3            4   35    Male       9               12              5             17           Premium       Quarterly          232                18      0
+4            5   53  Female      58               24              9              2          Standard          Annual          533                18      0

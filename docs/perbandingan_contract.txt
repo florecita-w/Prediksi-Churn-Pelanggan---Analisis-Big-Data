@@ -1,0 +1,48 @@
+Ukuran: train 352,665 | valid 88,167 | test 64,374 (testing asli, utuh)
+Kontrak Monthly -> churn: train 100.0% | valid 100.0% | test 51.6%
+
+== TRAIN (in-sample) ==
+                      pembanding      n  churn_%  PR-AUC  ROC-AUC  precision  recall    F1  akurasi
+         Aturan: Monthly = churn 352665     56.7   0.718    0.675      1.000   0.349 0.518    0.631
+          Model semua fitur (LR) 352665     56.7   0.974    0.960      0.926   0.888 0.906    0.896
+          Model semua fitur (RF) 352665     56.7   1.000    1.000      1.000   0.983 0.991    0.990
+Model tanpa contract_length (LR) 352665     56.7   0.954    0.928      0.881   0.853 0.867    0.851
+Model tanpa contract_length (RF) 352665     56.7   0.994    0.989      1.000   0.962 0.980    0.978
+               Tebak semua churn 352665     56.7   0.567    0.500      0.567   1.000 0.724    0.567
+
+== VALID  ==
+                      pembanding     n  churn_%  PR-AUC  ROC-AUC  precision  recall    F1  akurasi
+         Aturan: Monthly = churn 88167     56.7   0.717    0.673      1.000   0.345 0.513    0.629
+          Model semua fitur (LR) 88167     56.7   0.974    0.959      0.923   0.885 0.904    0.893
+          Model semua fitur (RF) 88167     56.7   1.000    1.000      1.000   0.983 0.991    0.990
+Model tanpa contract_length (LR) 88167     56.7   0.953    0.928      0.879   0.855 0.867    0.851
+Model tanpa contract_length (RF) 88167     56.7   0.995    0.990      1.000   0.962 0.981    0.978
+               Tebak semua churn 88167     56.7   0.567    0.500      0.567   1.000 0.724    0.567
+
+== TEST  ==
+                      pembanding     n  churn_%  PR-AUC  ROC-AUC  precision  recall    F1  akurasi
+         Aturan: Monthly = churn 64374     47.4   0.490    0.529      0.516   0.375 0.434    0.537
+          Model semua fitur (LR) 64374     47.4   0.640    0.689      0.525   0.991 0.686    0.571
+          Model semua fitur (RF) 64374     47.4   0.640    0.725      0.493   0.998 0.660    0.514
+Model tanpa contract_length (LR) 64374     47.4   0.729    0.775      0.535   0.983 0.693    0.587
+Model tanpa contract_length (RF) 64374     47.4   0.670    0.752      0.501   0.998 0.667    0.528
+               Tebak semua churn 64374     47.4   0.474    0.500      0.474   1.000 0.643    0.474
+
+== Ringkasan PR-AUC dan F1: seberapa turun dari valid ke test ==
+                                  PR-AUC valid  PR-AUC test  selisih  F1 valid  F1 test
+pembanding                                                                             
+Aturan: Monthly = churn                  0.717        0.490    0.227     0.513    0.434
+Model semua fitur (LR)                   0.974        0.640    0.334     0.904    0.686
+Model semua fitur (RF)                   1.000        0.640    0.360     0.991    0.660
+Model tanpa contract_length (LR)         0.953        0.729    0.224     0.867    0.693
+Model tanpa contract_length (RF)         0.995        0.670    0.325     0.981    0.667
+Tebak semua churn                        0.567        0.474    0.093     0.724    0.643
+
+== Di test: RF menurut jenis kontrak (ambang 0,5) ==
+                   model   kontrak     n  churn_%  ditandai_%  precision  recall
+          RF semua fitur    Annual 21410     46.2        93.7      0.491   0.995
+          RF semua fitur   Monthly 22130     51.6       100.0      0.516   1.000
+          RF semua fitur Quarterly 20834     44.0        93.5      0.471   0.999
+RF tanpa contract_length    Annual 21410     46.2        94.4      0.488   0.996
+RF tanpa contract_length   Monthly 22130     51.6        94.6      0.545   0.999
+RF tanpa contract_length Quarterly 20834     44.0        94.1      0.468   0.999

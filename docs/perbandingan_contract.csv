@@ -1,0 +1,19 @@
+pembanding,data,n,churn_%,PR-AUC,ROC-AUC,precision,recall,F1,akurasi
+Aturan: Monthly = churn,train,352665,56.7,0.718,0.675,1.0,0.349,0.518,0.631
+Aturan: Monthly = churn,valid,88167,56.7,0.717,0.673,1.0,0.345,0.513,0.629
+Aturan: Monthly = churn,test,64374,47.4,0.49,0.529,0.516,0.375,0.434,0.537
+Model semua fitur (LR),train,352665,56.7,0.974,0.96,0.926,0.888,0.906,0.896
+Model semua fitur (LR),valid,88167,56.7,0.974,0.959,0.923,0.885,0.904,0.893
+Model semua fitur (LR),test,64374,47.4,0.64,0.689,0.525,0.991,0.686,0.571
+Model semua fitur (RF),train,352665,56.7,1.0,1.0,1.0,0.983,0.991,0.99
+Model semua fitur (RF),valid,88167,56.7,1.0,1.0,1.0,0.983,0.991,0.99
+Model semua fitur (RF),test,64374,47.4,0.64,0.725,0.493,0.998,0.66,0.514
+Model tanpa contract_length (LR),train,352665,56.7,0.954,0.928,0.881,0.853,0.867,0.851
+Model tanpa contract_length (LR),valid,88167,56.7,0.953,0.928,0.879,0.855,0.867,0.851
+Model tanpa contract_length (LR),test,64374,47.4,0.729,0.775,0.535,0.983,0.693,0.587
+Model tanpa contract_length (RF),train,352665,56.7,0.994,0.989,1.0,0.962,0.98,0.978
+Model tanpa contract_length (RF),valid,88167,56.7,0.995,0.99,1.0,0.962,0.981,0.978
+Model tanpa contract_length (RF),test,64374,47.4,0.67,0.752,0.501,0.998,0.667,0.528
+Tebak semua churn,train,352665,56.7,0.567,0.5,0.567,1.0,0.724,0.567
+Tebak semua churn,valid,88167,56.7,0.567,0.5,0.567,1.0,0.724,0.567
+Tebak semua churn,test,64374,47.4,0.474,0.5,0.474,1.0,0.643,0.474
