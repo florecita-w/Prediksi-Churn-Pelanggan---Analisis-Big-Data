@@ -23,15 +23,6 @@ dist/
 # ---------- Jupyter ----------
 .ipynb_checkpoints/
  
-# ---------- Data (diunduh ulang per perangkat, lihat README) ----------
-# Isi folder data diabaikan, tapi file .gitkeep tetap dilacak
-# supaya struktur folder ikut ter-clone.
-data/raw/*
-data/curated/*
-data/model_ready/*
-data/scored/*
-!data/**/.gitkeep
- 
 # ---------- Artefak Spark (dibuat otomatis saat menjalankan PySpark) ----------
 spark-warehouse/
 metastore_db/
